@@ -1,0 +1,10 @@
+name: aircomp
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+    - -r backend/requirements.txt
+# 若在已有环境中安装，建议：pip install -r backend/requirements.txt

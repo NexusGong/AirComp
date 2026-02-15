@@ -1,0 +1,17 @@
+# SQLite 数据库文件（应用只使用 backend/aircomp.db）
+backend/aircomp.db
+/aircomp.db
+*.db
+
+# 环境与依赖
+.env
+.venv
+venv/
+__pycache__/
+*.py[cod]
+node_modules/
+
+# 构建与产物
+frontend/dist/
+*.egg-info/
+.Python
