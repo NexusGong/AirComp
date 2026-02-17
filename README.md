@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="frontend/public/logo.png" alt="AirComp" width="120" />
+  <img src="frontend/public/logo.png" alt="AirComp" width="240" />
 </p>
 
 # AirComp
@@ -150,7 +150,4 @@ AirComp/
 4. **浏览器**  
    打开 F12 → Console / Network，可查看请求 URL 与状态码，便于确认是否发出及是否被代理。
 
-### 其他
 
-- **管理员**：`user_id = 999` 可查看所有客户机数据（与业务约定一致）。
-- **邮件重置密码**：需在 `.env` 中配置 `MAIL_USERNAME`、`MAIL_PASSWORD`、`MAIL_FROM`（如 QQ 邮箱 + 授权码）。
