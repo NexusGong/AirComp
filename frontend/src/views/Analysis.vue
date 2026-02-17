@@ -545,7 +545,16 @@ function endStreamContent(msg) {
 /** 强制把最后一条消息同步到响应式数组，避免直接改 plain 对象导致视图不更新 */
 function commitLastMessageContent() {
   const last = messages.value.length - 1
-  if (last >= 0) messages.value[last] = { ...messages.value[last] }
+  if (last < 0) return
+  const msg = messages.value[last]
+  const next = {
+    role: msg.role,
+    content: msg.content ?? '',
+    payload: msg.payload != null ? { ...msg.payload } : undefined,
+  }
+  messages.value[last] = next
+  // 触发数组引用更新，确保「正在思考」立即被实际内容替换
+  messages.value = [...messages.value]
 }
 
 function isLastMsg(index) {
@@ -876,6 +885,7 @@ async function onSend() {
       if (data.session_id != null) analysisStore.updateSessionId(currentId.value, data.session_id)
     }
     commitLastMessageContent()
+    await nextTick()
     scrollToBottom()
   } catch (err) {
     if (err?.name === 'AbortError') {
@@ -885,6 +895,7 @@ async function onSend() {
     }
     if (currentId.value) analysisStore.appendMessage(currentId.value, 'assistant', assistantMsg.content)
     commitLastMessageContent()
+    await nextTick()
     scrollToBottom()
   } finally {
     sending.value = false

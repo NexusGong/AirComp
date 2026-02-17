@@ -96,8 +96,7 @@ def run_calculate(
     compare_ids = body.compare_ids
     if not compare_ids:
         raise HTTPException(status_code=400, detail="请至少选择一条对比数据")
-    machines = []
-    new_eq = []
+    valid_pairs = []
     company_name = None
     for data_id in compare_ids:
         comp = db.query(MachineCompare).filter(
@@ -105,7 +104,7 @@ def run_calculate(
             MachineCompare.user_id == current_user.id,
         ).first()
         if not comp:
-            raise HTTPException(status_code=404, detail=f"对比记录 {data_id} 不存在")
+            continue
         client = db.query(MachineClient).filter(
             and_(
                 MachineClient.name == comp.company_name,
@@ -113,27 +112,28 @@ def run_calculate(
             ),
         ).first()
         if not client:
-            raise HTTPException(status_code=404, detail=f"未找到客户机: {comp.company_name} / {comp.client_no}")
-        company_name = client.name
-        machines.append({
-            "no": client.no,
-            "model": client.model,
-            "run_time": client.run_time,
-            "load_time": client.load_time,
-            "ori_power": int(client.ori_power),
-            "air": float(client.air),
-            "brand": client.brand,
-            "isFC": bool(client.is_FC),
-            "origin_pre": float(client.origin_pre),
-            "actucal_pre": float(client.actual_pre),
-        })
-    for data_id in compare_ids:
-        comp = db.query(MachineCompare).filter(
-            MachineCompare.id == data_id,
-            MachineCompare.user_id == current_user.id,
-        ).first()
-        if not comp:
             continue
+        company_name = client.name
+        valid_pairs.append((comp, client))
+    if not valid_pairs:
+        raise HTTPException(status_code=400, detail="没有有效的对比数据，请检查所选记录是否存在且客户机仍存在")
+    machines = [
+        {
+            "no": c.no,
+            "model": c.model,
+            "run_time": c.run_time,
+            "load_time": c.load_time,
+            "ori_power": int(c.ori_power),
+            "air": float(c.air),
+            "brand": c.brand,
+            "isFC": bool(c.is_FC),
+            "origin_pre": float(c.origin_pre),
+            "actucal_pre": float(c.actual_pre),
+        }
+        for _, c in valid_pairs
+    ]
+    new_eq = []
+    for comp, _ in valid_pairs:
         supp = db.query(MachineSupplier).filter(
             and_(
                 MachineSupplier.name == comp.supplier_name,

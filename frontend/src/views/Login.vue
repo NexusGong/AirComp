@@ -367,7 +367,7 @@ watch(step, (s) => { if (s === 1) errorMsg.value = '' })
   margin-bottom: 1rem;
 }
 .auth-logo {
-  height: 48px;
+  height: 96px;
   width: auto;
   object-fit: contain;
 }
