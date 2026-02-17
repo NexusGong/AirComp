@@ -19,6 +19,7 @@ class User(Base):
     machine_suppliers = relationship("MachineSupplier", back_populates="user")
     machine_compare = relationship("MachineCompare", back_populates="user")
     analysis_sessions = relationship("AnalysisSession", back_populates="user")
+    energy_reports = relationship("EnergyReport", back_populates="user")
 
     def __repr__(self):
         return f"<User {self.username}>"

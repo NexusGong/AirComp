@@ -1,4 +1,4 @@
-"""空压机能效计算逻辑（从蓝本迁移，兼容更多品牌）"""
+"""AirComp 能耗计算逻辑（从蓝本迁移，兼容更多品牌）"""
 import pandas as pd
 import os
 
@@ -135,7 +135,7 @@ def originEC_to_dataframe(
         ori_air_list.append(eq_list[1])
         act_pre_list.append(eq_list[3])
     all_table = pd.DataFrame({
-        "空压机编号": no_list,
+        "设备编号": no_list,
         "原设备型号": type_list,
         "运行时间": run_list,
         "加载时间": load_list,
@@ -204,7 +204,7 @@ def final_results_excel(
         machines, eqs, running_hours_per_year=running_hours_per_year, calc_params=calc_params
     )
     safe_name = "".join(c for c in str(company_name) if c not in r'\/:*?"<>|').strip() or "未命名"
-    filename = f"{safe_name}_空压机概况表.xlsx"
+    filename = f"{safe_name}_能耗计算概况表.xlsx"
     filepath = os.path.join(output_dir, filename)
     with pd.ExcelWriter(filepath, engine="openpyxl") as writer:
         origin_eq_table.to_excel(writer, sheet_name="原有设备一览", index=False)

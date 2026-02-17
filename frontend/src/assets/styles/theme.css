@@ -578,21 +578,40 @@ body::before {
   background: rgba(124, 58, 237, 0.08);
 }
 
-/* ========== 设备信息页统一布局（录入风格优化） ========== */
+/* ========== 设备信息页统一布局（宽版 + 录入风格优化） ========== */
+/* 设备页使用全宽：突破 container 与内容区宽度限制（同时用 class 与 :has 以兼容各浏览器） */
+.container--equipment,
+.container:has(.equipment-layout) {
+  max-width: none;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+
 .equipment-page-wrap {
   max-width: 960px;
   margin: 0 auto;
   padding-top: 0.25rem;
 }
 
+.equipment-layout .equipment-page-wrap {
+  max-width: none;
+  margin: 0;
+  width: 100%;
+  padding-top: 0.5rem;
+}
+
 .equipment-tabs {
   display: flex;
   gap: 0.5rem;
   margin-bottom: 1.5rem;
-  padding: 0.25rem;
+  padding: 0.35rem;
   background: rgba(0, 0, 0, 0.25);
   border-radius: var(--radius);
   border: 1px solid var(--border);
+}
+
+.equipment-layout .equipment-tabs {
+  max-width: 100%;
 }
 
 .equipment-tabs .tab {
@@ -608,6 +627,51 @@ body::before {
   cursor: pointer;
   transition: color 0.2s, background 0.2s, box-shadow 0.2s;
   text-align: center;
+}
+
+.equipment-layout .equipment-tabs .tab {
+  max-width: none;
+  padding: 0.75rem 1.5rem;
+}
+
+/* 设备页：标题与选项卡同一行，横向拉满 */
+.equipment-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.equipment-page-header .page-title {
+  margin: 0;
+  font-size: 1.35rem;
+  flex-shrink: 0;
+}
+
+.equipment-page-header .equipment-tabs {
+  margin-bottom: 0;
+  flex: 1;
+  min-width: 240px;
+  max-width: 360px;
+}
+
+.equipment-layout .equipment-page-header .equipment-tabs {
+  max-width: none;
+  min-width: 280px;
+}
+
+/* 筛选卡片紧凑一行 */
+.equipment-filter-card {
+  padding: 0.75rem 1.25rem !important;
+  margin-bottom: 1rem !important;
+}
+
+.equipment-list-card {
+  min-width: 0;
 }
 
 .equipment-tabs .tab:hover {
@@ -631,6 +695,17 @@ body::before {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(124, 58, 237, 0.04);
   position: relative;
   overflow: hidden;
+}
+
+.equipment-layout .equipment-card {
+  width: 100%;
+  padding: 1.5rem 1.75rem;
+}
+
+.equipment-layout .equipment-card .table-responsive,
+.equipment-layout .equipment-card .table-tech {
+  width: 100%;
+  min-width: 0;
 }
 
 .equipment-card::before {
@@ -678,6 +753,10 @@ body::before {
   min-width: 200px;
   max-width: 280px;
   border-radius: var(--radius-sm);
+}
+
+.equipment-layout .filter-row .form-select {
+  max-width: 320px;
 }
 
 /* 表单网格：设备录入/修改页 */

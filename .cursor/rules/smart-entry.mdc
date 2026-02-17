@@ -4,7 +4,7 @@ globs: backend/app/services/doubao.py,backend/app/api/machines.py,frontend/src/v
 alwaysApply: false
 ---
 
-# 智能录入（空压机设备）
+# 智能录入（能耗计算设备）
 
 ## 核心能力要求
 

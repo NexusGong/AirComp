@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     )
 
     # 应用
-    app_name: str = "空压机能效计算系统"
+    app_name: str = "AirComp能耗计算系统"
     secret_key: str = "change-me-in-production-use-env-SECRET_KEY"
     debug: bool = True
 

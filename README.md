@@ -1,127 +1,156 @@
-# 空压机能效计算系统（优化版）
+<p align="center">
+  <img src="frontend/public/logo.png" alt="AirComp" width="120" />
+</p>
 
-基于原项目 air_cal_v3 的现代化重构：**FastAPI** 后端 + **Vue 3** 前端，保留全部业务功能。
+# AirComp
+
+**空压机能耗计算与对比系统** — 基于 FastAPI + Vue 3 的现代化应用，支持客户设备与供应商设备维护、能效对比、节能量计算与报告导出。
+
+---
 
 ## 功能概览
 
-- 用户注册、登录、退出、忘记密码（邮件重置）
-- 首页动态（发帖、列表）
-- 用户主页
-- **客户机（原有设备）**：添加、列表、修改、删除
-- **供应商机（新设备）**：添加、列表、修改、删除
-- **对比关系**：选择客户机与供应商机建立对比
-- **能效计算**：勾选对比项生成 Excel（原有设备一览、原有设备能耗、能效对比）
-- 下载生成的 Excel 报表
+### 设备与计算
+
+- **客户机（原有设备）**：添加、列表、修改、删除；支持 Excel/CSV 上传或粘贴表格，由智能解析自动填入表单。
+- **供应商机（新设备）**：同样支持智能解析与增删改查。
+- **对比关系**：在「设备信息」中选择客户机与供应商机建立对比项。
+- **能效计算**：在「能耗计算」页勾选对比项，设置年运行小时等参数，一键生成 Excel（原有设备一览、能耗、能效对比）并自动生成可下载的报告记录。
+
+### 分析对话
+
+- 在「新建对话」中通过自然语言上传客户/供应商设备表格，或直接要求「计算某公司某几台机的节能量」，由助手引导选型与计算。
+
+### 账号与权限
+
+- **登录**：支持手机号+验证码、手机号/用户名+密码；注册后可设置密码以便下次密码登录。
+- **个人资料 / 修改密码 / 账号权限**：在侧栏用户菜单中通过弹窗完成，无需跳转独立页面。
+- **历史报告**：报告列表按时间倒序，可查看详情并下载对应 Excel。
+
+---
 
 ## 技术栈
 
-- **后端**: FastAPI、SQLAlchemy 2、Pydantic、JWT、Bcrypt、Pandas、OpenPyXL
-- **前端**: Vue 3、Vite、Vue Router、Pinia、Axios、Bootstrap 5
-- **数据库**: SQLite（无需安装，开箱即用）
-- **运行**: Conda 虚拟环境（后端）、Node.js（前端）
+| 层级 | 技术 | 说明 |
+|------|------|------|
+| 后端 | FastAPI | API 与路由 |
+| | SQLAlchemy 2 + Pydantic | 模型与校验 |
+| | JWT + Bcrypt | 认证与密码 |
+| | Pandas + OpenPyXL | 能耗计算与 Excel 生成 |
+| 前端 | Vue 3 + Vite | 应用与构建 |
+| | Pinia + Vue Router | 状态与路由 |
+| | Axios | 请求封装（含 /api 代理） |
+| 数据 | SQLite | 默认库，首次启动在 `backend/` 下自动创建 `aircomp.db` 并建表 |
+
+可选：短信验证码（互亿无线）、豆包大模型（智能解析/分析对话）。均通过 `backend/.env` 配置。
+
+---
 
 ## 环境准备
 
-### 1. Conda 环境（后端）
+- **Python 与后端依赖**：推荐使用 Conda。从项目根目录执行：
+  ```bash
+  conda env create -f environment.yml
+  conda activate aircomp
+  ```
+  若环境已存在，可只安装后端依赖：`pip install -r backend/requirements.txt`
+- **Node.js**：建议 18+，用于前端。进入 `frontend/` 后执行 `npm install`。
+- **数据库**：默认 SQLite，无需单独安装。首次启动后端会自动建表。
+- **可选配置**：在 `backend/` 下复制 `.env.example` 为 `.env`，可配置：
+  - `SECRET_KEY`、`FRONTEND_ORIGIN`（CORS）
+  - 短信：`SMS_ENABLED`、`SMS_ACCOUNT`、`SMS_PASSWORD` 等
+  - 豆包：`DOUBAO_API_KEY`、`DOUBAO_API_URL`、`DOUBAO_MODEL`
+  - 邮件重置密码（若启用）：`MAIL_USERNAME`、`MAIL_PASSWORD`、`MAIL_FROM`
+
+---
+
+## 启动方式
+
+### 方式一：从项目根目录用脚本启动后端
 
 ```bash
-cd /Users/nexusg/PycharmProject/AirComp
-conda env create -f environment.yml
-conda activate aircomp
+./run_backend.sh
 ```
 
-若已存在环境，可只安装后端依赖：
+后端将在 **8081** 端口启动（Conda 环境 `aircomp` 内运行 uvicorn）。
+
+### 方式二：手动分步启动
+
+**终端 1 — 后端**
 
 ```bash
+cd backend
 conda activate aircomp
-pip install -r backend/requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8081
 ```
 
-### 2. 数据库（SQLite）
-
-- 使用 **SQLite**，无需安装数据库。首次启动后端会在 `backend/` 下自动创建 `aircomp.db` 并建表。
-- 可选：在 `backend/` 下创建 `.env`（可复制 `backend/.env.example`），配置 `SECRET_KEY`、`FRONTEND_ORIGIN`、`SQLITE_PATH` 等。
-
-### 3. 前端依赖（Node 18+）
+**终端 2 — 前端**
 
 ```bash
 cd frontend
-npm install
-```
-
-## 启动
-
-### 终端 1：后端（Conda 环境）
-
-```bash
-cd /Users/nexusg/PycharmProject/AirComp
-conda activate aircomp
-cd backend
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
-```
-
-首次启动会自动建表。
-
-### 终端 2：前端
-
-```bash
-cd /Users/nexusg/PycharmProject/AirComp/frontend
+npm install   # 首次
 npm run dev
 ```
 
-浏览器访问：**http://localhost:5173**。前端会通过 Vite 代理将 `/api` 请求转发到后端 8080 端口。
+浏览器访问 **http://localhost:5173**。前端通过 Vite 将 `/api` 代理到 `http://127.0.0.1:8081`，无需配置 CORS；若修改后端端口，需同步修改 `frontend/vite.config.js` 中的 proxy `target`。
 
-## 目录结构
+---
+
+## 项目结构
 
 ```
 AirComp/
-├── backend/                 # FastAPI 后端
+├── backend/
 │   ├── app/
-│   │   ├── api/              # 路由：auth, posts, machines, calculate
-│   │   ├── core/             # 配置、安全
-│   │   ├── db/               # 数据库会话
-│   │   ├── models/           # SQLAlchemy 模型
-│   │   ├── schemas/          # Pydantic 模型
-│   │   ├── services/         # 计算逻辑、邮件
-│   │   ├── download/         # 生成的 Excel 输出目录
+│   │   ├── api/           # 路由：auth, posts, machines, calculate, analysis, reports
+│   │   ├── core/          # 配置、安全（JWT、密码哈希）
+│   │   ├── db/            # 数据库会话与 Base
+│   │   ├── models/        # User, Post, 设备、对比、分析、报告
+│   │   ├── schemas/       # Pydantic 请求/响应模型
+│   │   ├── services/      # 计算逻辑、设备匹配、智能解析、短信、豆包
+│   │   ├── download/      # 计算生成的 Excel 临时输出
+│   │   ├── reports/       # 报告文件存储
 │   │   └── main.py
 │   ├── requirements.txt
-│   ├── aircomp.db            # SQLite 数据库（运行后自动生成）
-│   └── .env.example
-├── frontend/                 # Vue 3 + Vite
+│   ├── .env.example
+│   └── aircomp.db         # 运行后自动生成
+├── frontend/
 │   ├── src/
-│   │   ├── api/
-│   │   ├── router/
-│   │   ├── stores/
-│   │   └── views/
-│   ├── package.json
-│   └── vite.config.js
-├── environment.yml           # Conda 环境
+│   │   ├── api/           # axios 实例与拦截器
+│   │   ├── router/        # 路由与鉴权
+│   │   ├── stores/        # auth, analysis
+│   │   ├── views/         # 登录、分析、设备、数据处理、报告等页面
+│   │   ├── components/    # 侧栏、弹窗等
+│   │   └── utils/        # 错误信息、表格解析等
+│   ├── public/            # 静态资源（如 logo.png）
+│   ├── vite.config.js     # 开发代理指向后端 8081
+│   └── package.json
+├── environment.yml        # Conda 环境定义
+├── run_backend.sh         # 一键启动后端（端口 8081）
 └── README.md
 ```
 
+---
+
 ## 故障排查
 
-### 智能解析一直「识别中」、后台没有任何输出
+### 智能解析一直「识别中」、后端无任何输出
 
 1. **确认请求是否到达后端**  
-   重启后端后，每次有请求进来，终端应出现类似：  
-   `[AirComp] POST /api/machines/smart-parse`  
-   若点击「解析并填入表单」后**始终没有**这行，说明请求没到当前这个后端进程。
+   重启后端后，每次请求终端应出现类似：`[AirComp] POST /api/machines/smart-parse`。若点击「解析并填入表单」后始终没有这行，说明请求未到达当前后端进程。
 
-2. **让请求走 Vite 代理（推荐）**  
-   在 `frontend/.env.development` 中**注释掉或删除** `VITE_API_BASE` 这一行（或设为空），保存后**重启前端**（`npm run dev`）。  
-   这样前端会请求同源的 `/api/`，由 Vite 代理转发到 `vite.config.js` 里配置的后端地址（默认 8081），避免直连跨域或连错端口。
+2. **使用 Vite 代理（推荐）**  
+   在 `frontend/.env.development` 中注释或删除 `VITE_API_BASE`，保存后重启前端（`npm run dev`），使前端请求同源 `/api/`，由 Vite 转发到 `vite.config.js` 中配置的后端地址（默认 8081）。
 
-3. **确认后端端口一致**  
-   - 用 `bash run_backend.sh` 启动时，后端在 **8081** 端口。  
-   - `frontend/vite.config.js` 里 proxy 的 `target` 需为 `http://127.0.0.1:8081`。  
-   若你改过后端端口，请同时改 vite 的 proxy 和（若使用直连）`.env.development` 里的 `VITE_API_BASE`。
+3. **端口一致**  
+   - 使用 `run_backend.sh` 时后端在 **8081**。  
+   - `frontend/vite.config.js` 的 proxy `target` 需为 `http://127.0.0.1:8081`。  
+   若修改后端端口，请同时修改 proxy 与（若使用直连）`.env.development` 中的 `VITE_API_BASE`。
 
-4. **浏览器控制台**  
-   打开 F12 → Console，点击解析时会出现 `[AirComp] 智能解析请求 URL: ...`，可确认实际请求地址；Network 里看该请求是否发出、状态码和响应。
+4. **浏览器**  
+   打开 F12 → Console / Network，可查看请求 URL 与状态码，便于确认是否发出及是否被代理。
 
-## 说明
+### 其他
 
-- 管理员：`user_id = 999` 可查看所有客户机数据（与蓝本一致）。
-- 邮件重置密码需在 `.env` 中配置 `MAIL_USERNAME`、`MAIL_PASSWORD`、`MAIL_FROM`（如 QQ 邮箱 + 授权码）。
+- **管理员**：`user_id = 999` 可查看所有客户机数据（与业务约定一致）。
+- **邮件重置密码**：需在 `.env` 中配置 `MAIL_USERNAME`、`MAIL_PASSWORD`、`MAIL_FROM`（如 QQ 邮箱 + 授权码）。

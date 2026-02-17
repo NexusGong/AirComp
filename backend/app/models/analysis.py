@@ -10,7 +10,7 @@ class AnalysisSession(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
-    title = Column(String(200), default="新建分析")
+    title = Column(String(200), default="新建对话")
     created_at = Column(DateTime, default=datetime.now)
 
     user = relationship("User", back_populates="analysis_sessions")

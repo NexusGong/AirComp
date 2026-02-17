@@ -1,8 +1,11 @@
 <template>
   <div class="auth-page">
     <div class="auth-card">
+      <div class="auth-brand">
+        <img src="/logo.png" alt="AirComp" class="auth-logo" />
+      </div>
       <h1 class="auth-title">登录 / 注册</h1>
-      <p class="auth-subtitle">空压机能效计算系统</p>
+      <p class="auth-subtitle">AirComp能耗计算系统</p>
 
       <div v-if="errorMsg" class="auth-error">{{ errorMsg }}</div>
 
@@ -358,6 +361,15 @@ watch(step, (s) => { if (s === 1) errorMsg.value = '' })
   border-radius: var(--radius-lg);
   padding: 2rem;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(124, 58, 237, 0.08);
+}
+.auth-brand {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+.auth-logo {
+  height: 48px;
+  width: auto;
+  object-fit: contain;
 }
 .auth-title {
   margin: 0 0 0.25rem 0;

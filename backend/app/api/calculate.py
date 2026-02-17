@@ -1,4 +1,6 @@
 import os
+import shutil
+import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -6,7 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_
 
 from app.api.deps import get_db, get_current_user
-from app.models import User, MachineClient, MachineSupplier, MachineCompare
+from app.models import User, MachineClient, MachineSupplier, MachineCompare, EnergyReport
 from app.services.cal_func import final_results_excel
 from app.services.device_match import (
     client_orm_to_dict,
@@ -16,13 +18,51 @@ from app.services.device_match import (
 router = APIRouter(prefix="/calculate", tags=["calculate"])
 
 # 生成文件存放目录（相对于 backend 根目录）
-DOWNLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "app", "download")
+_BACKEND_APP = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+DOWNLOAD_DIR = os.path.join(_BACKEND_APP, "app", "download")
+REPORTS_DIR = os.path.join(_BACKEND_APP, "app", "reports")
 
 ADMIN_ID = 999
 
 
+def _save_report(
+    db: Session,
+    user_id: int,
+    source: str,
+    filepath: str,
+    company_name: str,
+    energy_savings_kwh: int,
+    energy_savings_cost: float | None = None,
+) -> EnergyReport:
+    """将生成的 Excel 复制到 reports 目录并创建报告记录。"""
+    os.makedirs(REPORTS_DIR, exist_ok=True)
+    unique_name = f"report_{uuid.uuid4().hex}.xlsx"
+    dest_path = os.path.join(REPORTS_DIR, unique_name)
+    shutil.copy2(filepath, dest_path)
+    title = f"{company_name} 节能量计算" if company_name else "节能量计算"
+    report = EnergyReport(
+        user_id=user_id,
+        title=title,
+        source=source,
+        company_name=company_name or None,
+        filename=unique_name,
+        energy_savings_kwh=energy_savings_kwh,
+        energy_savings_cost=float(energy_savings_cost) if energy_savings_cost is not None else None,
+    )
+    db.add(report)
+    db.commit()
+    db.refresh(report)
+    return report
+
+
 class CalculateRequest(BaseModel):
     compare_ids: list[int]
+    running_hours_per_year: int | None = 8000
+    electricity_price: float | None = None
+    default_ser_p: float | None = None
+    default_por: float | None = None
+    empty_waste_ratio: float | None = None
+    pressure_drop_ratio: float | None = None
 
 
 class RecommendRequest(BaseModel):
@@ -112,9 +152,42 @@ def run_calculate(
             "energy_con_min": float(supp.energy_con_min),
         })
     safe_name = "".join(c for c in str(company_name or "未命名") if c not in r'\/:*?"<>|').strip() or "未命名"
-    filepath, _ = final_results_excel(company_name or "未命名", machines, new_eq, DOWNLOAD_DIR)
+    running_hours = body.running_hours_per_year if body.running_hours_per_year is not None else 8000
+    calc_params = {}
+    if body.default_ser_p is not None:
+        calc_params["default_ser_p"] = body.default_ser_p
+    if body.default_por is not None:
+        calc_params["default_por"] = body.default_por
+    if body.empty_waste_ratio is not None:
+        calc_params["empty_waste_ratio"] = body.empty_waste_ratio
+    if body.pressure_drop_ratio is not None:
+        calc_params["pressure_drop_ratio"] = body.pressure_drop_ratio
+    filepath, energy_savings_kwh = final_results_excel(
+        company_name or "未命名",
+        machines,
+        new_eq,
+        DOWNLOAD_DIR,
+        running_hours_per_year=running_hours,
+        calc_params=calc_params if calc_params else None,
+    )
+    energy_savings_cost = None
+    if body.electricity_price is not None and body.electricity_price >= 0:
+        energy_savings_cost = round(energy_savings_kwh * body.electricity_price, 2)
+    report = _save_report(
+        db, current_user.id, "manual", filepath, safe_name,
+        energy_savings_kwh, energy_savings_cost,
+    )
     filename = os.path.basename(filepath)
-    return {"message": "生成成功", "filename": filename, "company_name": safe_name}
+    result = {
+        "message": "生成成功，已加入历史报告",
+        "filename": filename,
+        "company_name": safe_name,
+        "report_id": report.id,
+        "energy_savings_kwh": energy_savings_kwh,
+    }
+    if energy_savings_cost is not None:
+        result["energy_savings_cost"] = energy_savings_cost
+    return result
 
 
 def _client_query_by_user(db: Session, user: User):
@@ -186,10 +259,15 @@ def run_recommend(
 
     company_name = body.company_name or "未命名"
     filepath, energy_savings_kwh = final_results_excel(company_name, machines, new_eq, DOWNLOAD_DIR)
+    report = _save_report(
+        db, current_user.id, "dialogue", filepath, safe_name,
+        energy_savings_kwh, None,
+    )
     filename = os.path.basename(filepath)
     return {
         **base,
         "filename": filename,
+        "report_id": report.id,
         "energy_savings_kwh": energy_savings_kwh,
     }
 
@@ -197,10 +275,12 @@ def run_recommend(
 @router.post("/run-with-params")
 def run_with_params(
     body: RunWithParamsRequest,
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """按弹窗中确认的参数（可修改的原有设备、选型设备、年运行时间、电费）执行节能计算并生成 Excel。"""
     company_name = body.company_name or "未命名"
+    safe_name = "".join(c for c in str(company_name) if c not in r'\/:*?"<>|').strip() or "未命名"
     machines = _normalize_machines(body.machines)
     new_eq = _normalize_new_eq(body.new_eq)
     if len(machines) != len(new_eq):
@@ -222,14 +302,22 @@ def run_with_params(
         running_hours_per_year=body.running_hours_per_year,
         calc_params=calc_params if calc_params else None,
     )
+    energy_savings_cost = None
+    if body.electricity_price is not None and body.electricity_price >= 0:
+        energy_savings_cost = round(energy_savings_kwh * body.electricity_price, 2)
+    report = _save_report(
+        db, current_user.id, "dialogue", filepath, safe_name,
+        energy_savings_kwh, energy_savings_cost,
+    )
     filename = os.path.basename(filepath)
     result = {
-        "message": "生成成功",
+        "message": "生成成功，已加入历史报告",
         "filename": filename,
+        "report_id": report.id,
         "energy_savings_kwh": energy_savings_kwh,
     }
-    if body.electricity_price is not None and body.electricity_price >= 0:
-        result["energy_savings_cost"] = round(energy_savings_kwh * body.electricity_price, 2)
+    if energy_savings_cost is not None:
+        result["energy_savings_cost"] = energy_savings_cost
     return result
 
 

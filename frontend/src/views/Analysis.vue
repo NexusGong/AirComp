@@ -5,8 +5,10 @@
       <template v-if="messages.length === 0">
         <div class="chat-center">
           <div class="chat-welcome">
-            <p class="chat-welcome-title">空压机能效分析</p>
-            <p class="chat-welcome-desc">输入消息开始对话。可粘贴设备表格、上传文件，或直接描述需求（如计算某客户某几台机的节能量）。</p>
+            <div class="chat-welcome-logo-wrap">
+              <img src="/logo.png" alt="AirComp" class="chat-welcome-logo" />
+            </div>
+            <p class="chat-welcome-desc">开始你的能耗分析</p>
           </div>
           <div class="chat-input-wrap chat-input-wrap--center">
             <div class="chat-input-box">
@@ -104,7 +106,7 @@
                   </button>
                 </div>
               </template>
-              <template v-else-if="msg.role === 'assistant' && msg.payload?.intent === 'run_energy_calculation' && msg.payload?.company_name && msg.payload?.filename">
+              <template v-else-if="msg.role === 'assistant' && msg.payload?.intent === 'run_energy_calculation' && msg.payload?.company_name && (msg.payload?.filename || msg.payload?.report_id)">
                 <div v-if="msg.payload?.energy_savings_kwh != null" class="chat-msg-energy">
                   <span class="chat-msg-energy-label">节能量（年总节电）</span>
                   <span class="chat-msg-energy-value">{{ msg.payload.energy_savings_kwh.toLocaleString() }} kWh</span>
@@ -115,7 +117,7 @@
                 </div>
                 <div class="chat-msg-btns">
                   <button type="button" class="chat-btn chat-btn-secondary" @click="onResetSelection(msg)">重新选型</button>
-                  <button type="button" class="chat-btn chat-btn-primary" @click="doDownload(msg.payload.filename)">下载 Excel 报告</button>
+                  <button type="button" class="chat-btn chat-btn-primary" @click="doDownloadReport(msg.payload.report_id, msg.payload.filename, msg.payload.company_name)">下载 Excel 报告</button>
                 </div>
               </template>
             </div>
@@ -303,7 +305,7 @@
           <div class="parsed-modal-body params-modal-body">
             <section class="params-block params-block--global">
               <h3 class="params-block-title">全局计算参数</h3>
-              <p class="params-block-desc">以下参数可按实际工况修改；变频加载比例、空载浪费系数、压降浪费系数由系统按公式计算，无需填写。</p>
+              <p class="params-block-desc">以下参数可按实际工况修改；未填写的项将使用系统默认或按品牌计算。</p>
               <div class="params-grid">
                 <label class="params-field">
                   <span class="params-field-label">年运行时间（小时）</span>
@@ -312,13 +314,13 @@
                 </label>
                 <label class="params-field">
                   <span class="params-field-label">电费（元/kWh）</span>
-                  <input v-model.number="paramsForm.electricity_price" type="number" min="0" step="0.01" class="params-field-input" placeholder="选填" />
-                  <span class="params-field-hint">选填，用于计算年节约电费</span>
+                  <input v-model.number="paramsForm.electricity_price" type="number" min="0" step="0.01" class="params-field-input" placeholder="0.8" />
+                  <span class="params-field-hint">用于计算年节约电费，默认 0.8</span>
                 </label>
                 <label class="params-field">
                   <span class="params-field-label">服务系数默认值</span>
-                  <input v-model.number="paramsForm.default_ser_p" type="number" min="0" step="0.01" class="params-field-input" placeholder="1.2" />
-                  <span class="params-field-hint">未设则按品牌：阿特拉斯/凯撒 1.15，英格索兰 1.2，复盛 1.3</span>
+                  <input v-model.number="paramsForm.default_ser_p" type="number" min="0" step="0.01" class="params-field-input" placeholder="按品牌" />
+                  <span class="params-field-hint">未设则按品牌</span>
                 </label>
               </div>
             </section>
@@ -758,7 +760,19 @@ function parseSSE(reader, decoder, onEvent, onError) {
   })()
 }
 
-async function doDownload(filename) {
+async function doDownloadReport(reportId, filename, companyName) {
+  if (reportId) {
+    try {
+      const { data } = await api.get(`reports/${reportId}/download`, { responseType: 'blob' })
+      const url = URL.createObjectURL(data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = (companyName || '节能量计算') + '.xlsx'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (_) {}
+    return
+  }
   if (!filename) return
   try {
     const { data } = await api.get('calculate/download', { params: { filename }, responseType: 'blob' })
@@ -920,7 +934,7 @@ const paramsCalcLoading = ref(false)
 const paramsForm = ref({
   company_name: '',
   running_hours_per_year: 8000,
-  electricity_price: null,
+  electricity_price: 0.8,
   default_ser_p: null,
   machines: [],
   new_eq: [],
@@ -939,7 +953,7 @@ function openParamsModal(msg) {
   paramsForm.value = {
     company_name: p.company_name || '',
     running_hours_per_year: 8000,
-    electricity_price: p.electricity_price ?? null,
+    electricity_price: p.electricity_price ?? 0.8,
     default_ser_p: p.default_ser_p ?? null,
     machines: JSON.parse(JSON.stringify(p.machines)),
     new_eq: JSON.parse(JSON.stringify(p.new_eq)),
@@ -977,12 +991,14 @@ async function submitParamsCalculation() {
       msg.payload = {
         ...msg.payload,
         filename: data.filename,
+        report_id: data.report_id ?? null,
         energy_savings_kwh: data.energy_savings_kwh ?? null,
         energy_savings_cost: data.energy_savings_cost ?? null,
       }
       if (currentId.value) analysisStore.save()
     }
-    if (currentId.value) analysisStore.appendMessage(currentId.value, 'assistant', '已生成节能计算报告，可下载 Excel。')
+    const reportHint = data.report_id ? '已同步保存至「历史报告」，可前往左侧侧边栏「历史报告」查看或下载。' : '可下载 Excel。'
+    if (currentId.value) analysisStore.appendMessage(currentId.value, 'assistant', '已生成节能计算报告，' + reportHint)
     closeParamsModal()
     scrollToBottom()
   } catch (err) {
@@ -1118,11 +1134,21 @@ watch(
   text-align: center;
 }
 
-.chat-welcome-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text);
-  margin: 0 0 0.5rem;
+/* 裁剪容器：限制纵向高度，内部图片放大后居中裁剪，logo 更大且少占上下空间 */
+.chat-welcome-logo-wrap {
+  height: 120px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+.chat-welcome-logo {
+  height: 200px;
+  width: auto;
+  object-fit: contain;
+  position: relative;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .chat-welcome-desc {

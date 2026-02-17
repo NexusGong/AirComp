@@ -6,8 +6,8 @@ from app.api.deps import get_db, get_current_user
 from app.core.security import get_password_hash, create_access_token, verify_password
 from app.models import User
 from app.schemas import (
-    UserResponse, Token, UserLogin, UserCreate, AccountLogin, SetPasswordRequest,
-    SmsSendRequest, SmsSendResponse, SmsLoginRequest, SmsRegisterRequest,
+    UserResponse, Token, UserCreate, AccountLogin, SetPasswordRequest,
+    UpdateProfileRequest, SmsSendRequest, SmsSendResponse, SmsLoginRequest, SmsRegisterRequest,
 )
 from app.services.sms import is_valid_phone, send_verification_code, verify_code, get_remaining_time
 
@@ -16,6 +16,25 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.get("/me", response_model=UserResponse)
 def me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+
+@router.patch("/me", response_model=UserResponse)
+def update_me(data: UpdateProfileRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """更新用户名、头像等个人资料"""
+    u = data.username.strip()
+    if len(u) < 3 or len(u) > 20:
+        raise HTTPException(status_code=400, detail="用户名需 3–20 个字符")
+    other = db.query(User).filter(User.username == u, User.id != current_user.id).first()
+    if other:
+        raise HTTPException(status_code=400, detail="用户名已被占用")
+    current_user.username = u
+    if data.avatar_img is not None:
+        if len(data.avatar_img) > 256:
+            raise HTTPException(status_code=400, detail="头像路径过长")
+        current_user.avatar_img = data.avatar_img.strip() or current_user.avatar_img
+    db.commit()
+    db.refresh(current_user)
     return current_user
 
 

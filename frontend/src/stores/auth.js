@@ -52,10 +52,19 @@ export const useAuthStore = defineStore('auth', () => {
     return res.data
   }
 
-  /** 注册后设置用户名与密码（已登录状态下调用） */
+  /** 设置/修改密码（可选同时设置用户名，如注册后设置） */
   async function setPassword(usernameOrNull, password) {
     const body = usernameOrNull != null && usernameOrNull !== '' ? { username: usernameOrNull.trim(), password } : { password }
     await api.post('auth/set-password', body)
+  }
+
+  /** 更新个人资料（用户名、头像） */
+  async function updateProfile(username, avatarImg = null) {
+    const body = { username: username.trim() }
+    if (avatarImg != null) body.avatar_img = avatarImg
+    const res = await api.patch('auth/me', body)
+    user.value = res.data
+    localStorage.setItem(USER_KEY, JSON.stringify(res.data))
   }
 
   async function register(username, password) {
@@ -111,6 +120,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     setPassword,
+    updateProfile,
     sendSmsCode,
     loginBySms,
     registerBySms,

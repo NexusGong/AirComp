@@ -1,22 +1,23 @@
 <template>
   <div class="page-card equipment-page-wrap">
-    <h1 class="page-title">供应商设备信息</h1>
-
-    <div class="equipment-tabs">
-      <button type="button" class="tab" :class="{ active: view === 'add' }" @click="switchView('add')">
-        设备信息录入
-      </button>
-      <button type="button" class="tab" :class="{ active: view === 'list' }" @click="switchView('list')">
-        查看信息
-      </button>
-    </div>
+    <header class="equipment-page-header">
+      <h1 class="page-title">供应商设备信息</h1>
+      <div class="equipment-tabs">
+        <button type="button" class="tab" :class="{ active: view === 'add' }" @click="switchView('add')">
+          设备信息录入
+        </button>
+        <button type="button" class="tab" :class="{ active: view === 'list' }" @click="switchView('list')">
+          查看信息
+        </button>
+      </div>
+    </header>
 
     <template v-if="view === 'add'">
       <AddSupplierEmbed />
     </template>
 
     <template v-else>
-      <div class="equipment-card">
+      <div class="equipment-card equipment-filter-card">
         <div class="filter-row">
           <label class="form-label">选择供应商</label>
           <select v-model="selectedSupplier" class="form-select">
@@ -25,7 +26,7 @@
           </select>
         </div>
       </div>
-      <div class="equipment-card">
+      <div class="equipment-card equipment-list-card">
         <SupplierEquipmentEmbed :supplier="selectedSupplier" embedded />
       </div>
     </template>

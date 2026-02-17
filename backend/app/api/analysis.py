@@ -33,7 +33,7 @@ class AnalysisChatRequest(BaseModel):
 
 def _title_from_content(content: str, max_len: int = 28) -> str:
     first = (content or "").strip().split("\n")[0] or (content or "").strip()
-    return (first[:max_len] or "新建分析").strip()
+    return (first[:max_len] or "新建对话").strip()
 
 
 @router.post("/chat")

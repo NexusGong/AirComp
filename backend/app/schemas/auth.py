@@ -1,12 +1,6 @@
 from pydantic import BaseModel
 
 
-class UserLogin(BaseModel):
-    username: str
-    password: str
-    remember: bool = True
-
-
 class AccountLogin(BaseModel):
     """手机号或用户名 + 密码登录"""
     account: str
@@ -17,6 +11,12 @@ class SetPasswordRequest(BaseModel):
     """注册后设置用户名与密码（用户名可选，不传则保留当前）"""
     username: str | None = None
     password: str
+
+
+class UpdateProfileRequest(BaseModel):
+    """更新个人资料（用户名、头像）"""
+    username: str
+    avatar_img: str | None = None
 
 
 class UserCreate(BaseModel):

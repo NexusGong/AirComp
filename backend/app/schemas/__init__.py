@@ -1,6 +1,6 @@
 from .auth import (
-    Token, TokenPayload, UserResponse, UserLogin, UserCreate,
-    AccountLogin, SetPasswordRequest,
+    Token, TokenPayload, UserResponse, UserCreate,
+    AccountLogin, SetPasswordRequest, UpdateProfileRequest,
     SmsSendRequest, SmsSendResponse, SmsLoginRequest, SmsRegisterRequest,
 )
 from .machine import (
@@ -22,8 +22,8 @@ from .machine import (
 from .post import PostCreate, PostResponse
 
 __all__ = [
-    "Token", "TokenPayload", "UserResponse", "UserLogin", "UserCreate",
-    "AccountLogin", "SetPasswordRequest",
+    "Token", "TokenPayload", "UserResponse", "UserCreate",
+    "AccountLogin", "SetPasswordRequest", "UpdateProfileRequest",
     "SmsSendRequest", "SmsSendResponse", "SmsLoginRequest", "SmsRegisterRequest",
     "MachineClientCreate", "MachineClientUpdate", "MachineClientResponse",
     "SmartParseRequest", "SmartParseRecord", "BatchClientsCreate", "BatchClientsResponse",
